@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Handle, Position } from "reactflow";
+import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 
 export const BaseNode = ({ data }) => {
   const { id, nodeType } = data;
@@ -8,8 +8,8 @@ export const BaseNode = ({ data }) => {
   const [variables, setVariables] = useState([]);
   const [selectedFileName, setSelectedFileName] = useState('');
   const textareaRef = useRef(null);
+  const updateNodeInternals = useUpdateNodeInternals();
 
-  // Auto-resize textarea on promptOne change
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -17,20 +17,17 @@ export const BaseNode = ({ data }) => {
     }
   }, [promptOne]);
 
-  // Extract variables with delay to allow React to re-render handles before connections
   useEffect(() => {
+    
     const extractVars = (text) =>
       [...text.matchAll(/\{\{\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*\}\}/g)].map((m) => m[1].trim());
-
     const varsOne = extractVars(promptOne);
     const varsTwo = extractVars(promptTwo);
     const allVars = [...new Set([...varsOne, ...varsTwo])];
-
-    // Delay ensures React renders handles before connection is attempted
-    setTimeout(() => {
-      setVariables(allVars);
-    }, 10);
+    setVariables(allVars);
+    updateNodeInternals(id);
   }, [promptOne, promptTwo]);
+
 
   const handleFileChange = (e) => {
     if (e.target.files.length > 0) {
@@ -52,7 +49,7 @@ export const BaseNode = ({ data }) => {
             ref={textareaRef}
             value={promptOne}
             onChange={(e) => setPromptOne(e.target.value)}
-            className="bg-white w-full overflow-hidden resize-none border border-gray-300 rounded-[8px] p-2"
+            className="bg-white w-full min-h-[150px] overflow-hidden border border-gray-300 rounded-[8px] p-2"
             placeholder="Enter Prompt"
           />
         </label>
@@ -126,9 +123,8 @@ export const BaseNode = ({ data }) => {
             key={variable}
             type="target"
             position={Position.Left}
-            id={`${id}-${variable}`}
+            id={`${variable}-${index}`}
             style={{ top: `${(index + 1) * 25}px` }}
-            isConnectable={true}
           />
         ))}
     </div>
